@@ -17,6 +17,8 @@ public class EnemyAI : MonoBehaviour
     float moveSpeed = 2f; // changed bullets to be kinematic
     int layerMask = 1<<8;
 
+    public float frontRaycastSize;
+
     void Start()
     {
         player = GameObject.FindGameObjectWithTag("player");
@@ -24,7 +26,6 @@ public class EnemyAI : MonoBehaviour
 
         rb = this.GetComponent<Rigidbody2D>();
         layerMask = ~layerMask;
-
     }
 
     void Update()
@@ -42,9 +43,9 @@ public class EnemyAI : MonoBehaviour
 
         Vector3 fwt = this.transform.TransformDirection(Vector3.right);
 
-        RaycastHit2D hit2 = Physics2D.Raycast(new Vector2(this.transform.position.x, this.transform.position.x), new Vector2(fwt.x, fwt.y), 1f, layerMask);
+        RaycastHit2D hit2 = Physics2D.Raycast(new Vector2(this.transform.position.x, this.transform.position.y), new Vector2(fwt.x, fwt.y), frontRaycastSize, layerMask); // this hit2 raycast is in charge to detect a wall on the way of the enemy, in order to make him turn in patrol()
 
-        Debug.DrawRay (new Vector2(this.transform.position.x, this.transform.position.y), new Vector2(fwt.x, fwt.y), Color.cyan);
+        Debug.DrawRay(new Vector2(this.transform.position.x, this.transform.position.y), new Vector2(fwt.x, fwt.y) * frontRaycastSize, Color.cyan); // hit2 visual representation.
 
         if(moving)
         {
@@ -53,14 +54,13 @@ public class EnemyAI : MonoBehaviour
 
         if(patrol)
         {
-            Debug.Log("Patrolling normally");
             moveSpeed = 2f;
 
-            if(hit.collider != null)
+            if(hit2.collider != null) // if a Raycast is traced in the front of the enemy
             {
-                if (hit2.collider.gameObject.tag == "walls")
+                if (hit2.collider.gameObject.tag == "walls") // if the raycast hits a wall
                 {
-                    if(clockwise == false)
+                    if(clockwise == false) // rotate
                     {
                         transform.Rotate(0, 0, 90);
                     }
