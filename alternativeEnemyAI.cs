@@ -1,0 +1,125 @@
+// the script works with raycasts.
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class EnemyAI : MonoBehaviour
+{
+    private GameObject player;
+    public bool patrol = true, gaurd = false, clockwise=false;
+    public bool moving = true;
+    public bool pursuingPlayer = false, goingToLastLoc=false;
+    Vector3 target;
+    Rigidbody2D rb;
+    public Vector3 playerLastPos;
+    public float moveSpeed = 2f; // changed bullets to be kinematic
+    int layerMask = 1<<8;
+    RaycastHit2D playerDetectRaycast;
+
+    public float frontRaycastSize;
+
+    void Start()
+    {
+        player = GameObject.FindGameObjectWithTag("player");
+        playerLastPos = this.transform.position;
+
+        rb = this.GetComponent<Rigidbody2D>();
+        layerMask = ~layerMask;
+    }
+
+    void Update()
+    {
+        movement();
+    }
+
+    void movement()
+    {
+        float dist = Vector3.Distance(player.transform.position, this.transform.position);
+        Vector3 dir = player.transform.position - transform.position;
+
+        Vector3 fwt = this.transform.TransformDirection(Vector3.right);
+
+        RaycastHit2D wallDetectionRaycast = Physics2D.Raycast(new Vector2(this.transform.position.x, this.transform.position.y), new Vector2(fwt.x, fwt.y), frontRaycastSize, layerMask); // this hit2 raycast is in charge to detect a wall on the way of the enemy, in order to make him turn in patrol()
+
+        Debug.DrawRay(new Vector2(this.transform.position.x, this.transform.position.y), new Vector2(fwt.x, fwt.y) * frontRaycastSize, Color.cyan); // hit2 visual representation.
+
+        if(moving)
+        {
+            transform.Translate(Vector3.right * moveSpeed * Time.deltaTime);
+        }   
+
+        if(patrol)
+        {
+            moveSpeed = 2f;
+
+            if(wallDetectionRaycast.collider != null) // if a Raycast is traced in the front of the enemy
+            {
+                if (wallDetectionRaycast.collider.gameObject.tag == "walls") // if the raycast hits a wall
+                {
+                    //Quaternion rot = this.transform.rotation;
+
+                    if(clockwise == false) // rotate
+                    {
+                        transform.Rotate(0, 0, 90);
+                    }
+                    else
+                    {
+                        transform.Rotate(0, 0, -90);
+                    }
+                }
+            }
+
+            // player detection system
+            //Vector3 pos = this.transform.InverseTransformPoint(player.transform.position);
+
+            playerDetectRaycast = Physics2D.Raycast(new Vector2(this.transform.position.x, this.transform.position.y), new Vector2(dir.x, dir.y), dist, layerMask);
+            Debug.DrawRay(transform.position, new Vector2(dir.x, dir.y), Color.red);
+
+            if(playerDetectRaycast.collider != null)
+            {
+                Debug.Log(playerDetectRaycast.collider.gameObject.tag);
+                if(playerDetectRaycast.collider.gameObject.tag == "player" && Vector3.Distance(this.transform.position, player.transform.position) < 9)
+                {
+                    patrol = false;
+                    pursuingPlayer = true;
+                }
+                else
+                {
+                    if(pursuingPlayer)
+                    {
+                        goingToLastLoc = true;
+                        pursuingPlayer = false;
+                    }
+                }
+                
+            }
+        }
+
+        if(pursuingPlayer)
+        {
+            //Debug.Log("Pursuing player");
+            moveSpeed=3.5f;
+            rb.transform.eulerAngles = new Vector3(0,0, Mathf.Atan2((playerLastPos.y - transform.position.y), (playerLastPos.x - transform.position.x)) * Mathf.Rad2Deg);
+            // The Euler angles are mainly used to locate a moving Rm x3y3z3
+
+            if(playerDetectRaycast.collider.gameObject.tag == "player")
+            {
+                playerLastPos = player.transform.position;
+            }
+        }
+
+        if(goingToLastLoc)
+        {
+            Debug.Log("pursuing player");
+            moveSpeed = 3.5f;
+
+            rb.transform.eulerAngles = new Vector3(0,0, Mathf.Atan2((playerLastPos.y - transform.position.y), (playerLastPos.x - transform.position.x)) * Mathf.Rad2Deg);
+            if(Vector3.Distance(this.transform.position, playerLastPos) < 1.5f)
+            {
+                patrol = true;
+                goingToLastLoc = false;
+            }
+        }
+    }
+}
